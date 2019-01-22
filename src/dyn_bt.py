@@ -2,7 +2,7 @@
 
 # # Dynamic Bradley Terry
 
-from laf.python.sstools import simulate
+from .sstools import simulate
 from pypolyagamma import PyPolyaGamma
 import numpy as np
 import pandas as pd
