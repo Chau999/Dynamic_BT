@@ -44,7 +44,7 @@ def simulate_data(beta_0, num_players, num_matches, time_range, rho, sig, covari
         # loop through player combinations and simulate wins
         for i in range(num_players):
             for j in range(num_players):
-                if j > i :
+                if j > i:
                     y_t[i,j] = binom.rvs(n_t[i,j], win_prob(i,j, beta, covariates), size=1)
         y[t] = y_t
 
@@ -65,18 +65,31 @@ def sample_aux_vars(betas, num_matches, time_range, covariates=None):
     pg = PyPolyaGamma()
     if covariates is None:
         covariates = identity_matrix(len(betas))
-        
-    num_players = len(covariates)
-        
-    aux_vars = [np.matrix(
-                    [[pg.pgdraw(num_matches[t][i,j], (covariates[i]- covariates[j]).dot(betas[t]))
-                      #entries
-                      for j in range(num_players) # columns
-                     ] 
-                     for i in range(num_players) # rows
-                    ]
-                        ) for t in time_range # index of matrix-list
-               ]
+
+    if covariates.ndim == 2:
+        num_players = len(covariates)
+        aux_vars = [np.matrix(
+                          [[pg.pgdraw(num_matches[t][i,j], (covariates[i]- covariates[j]).dot(betas[t]))
+                            #entries
+                  for j in range(num_players) # columns
+                          ] 
+                 for i in range(num_players) # rows
+                          ]
+                      ) for t in time_range # index of matrix-list
+                      ]
+    else:
+        num_players = len(covariates[0])
+        aux_vars = [np.matrix(
+                          [[pg.pgdraw(num_matches[t][i,j], (covariates[t][i]- covariates[t][j]).dot(betas[t]))
+                            #entries
+                  for j in range(num_players) # columns
+                          ] 
+                 for i in range(num_players) # rows
+                          ]
+                      ) for t in time_range # index of matrix-list
+                      ]
+                
+
     return aux_vars
 
 # Omega (covariance of normal response)
@@ -127,12 +140,16 @@ def mcmc_dbt(covariates, y_obs, beta_0, init_betas,num_matches,time_range,num_pl
 
         if i % 100 == 0:
             print("Simulation {0} of {1}".format(i, nsim))
-
+        if covariates.ndim == 2:
+            Z = diff_matrix(num_players).dot(covariates)
+        else:
+            Z = np.array([diff_matrix(num_players).dot(covariates[t]) for t in time_range])
+                         
             # simulation smoother for state, beta
         betas = simulate( 
             a_init = beta_0, 
             P_init = identity_matrix(len(beta_0)), 
-            Z = diff_matrix(num_players).dot(covariates), # put covariates into here
+            Z = Z , # put covariates into here
             y = get_response(y_obs, num_matches, aux_vars, num_players),
             H = get_response_covariance(aux_vars, num_players), 
             T = identity_matrix(len(beta_0))*rho, 

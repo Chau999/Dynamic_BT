@@ -74,12 +74,12 @@ def kalman_filter(y, a_init, P_init, Z, H, T, R, Q):
             QQ = Q[t]
 
         v[t] = y[t] - ZZ.dot(a[t])
-        F = Z.dot(P[t]).dot(Z.T) + HH
+        F = ZZ.dot(P[t]).dot(ZZ.T) + HH
         Finv[t] = np.linalg.inv(F)
         # aa[t] = a[t] + P[t].dot(Z.T).dot(Finv[t]).dot(v[t])
         # PP[t] = P[t] - P[t].dot(Z.T).dot(Finv[t]).dot(Z).dot(P[t])
-        K[t] = TT.dot(P[t]).dot(Z.T).dot(Finv[t])
-        L = TT - K[t].dot(Z)
+        K[t] = TT.dot(P[t]).dot(ZZ.T).dot(Finv[t])
+        L = TT - K[t].dot(ZZ)
         if t + 1 < Nt:
             a[t + 1] = TT.dot(a[t]) + K[t].dot(v[t])
             P[t + 1] = TT.dot(P[t]).dot(L.T) + RR.dot(QQ).dot(RR.T)
@@ -146,7 +146,13 @@ def simulate(y, a_init, P_init, Z, H, T, R, Q):
     """
     # get dimensions:
     Ny, Np = y.shape
-    Nm = Z.shape[1]
+    
+    
+    if Z.ndim == 2:
+        Nm = Z.shape[1]
+    else:
+        Nm = Z.shape[2]
+        
     Nr = Q.shape[-1]
 
     # preallocate
